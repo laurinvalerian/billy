@@ -1,7 +1,7 @@
 /* Billy Service Worker – offline-fähig; HTML network-first, damit Updates
    beim nächsten Öffnen mit Internet automatisch ankommen. */
-const CACHE = 'billy-v2';
-const ASSETS = ['./', './index.html', './billy.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
+const CACHE = 'billy-v3';
+const ASSETS = ['./', './billy.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
@@ -18,8 +18,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const cachePut = res => {
-    const copy = res.clone();
-    caches.open(CACHE).then(c => c.put(e.request, copy));
+    /* Nur gesunde Antworten cachen – sonst vergiftet ein transienter 4xx/5xx den Offline-Cache */
+    if (res && res.ok) {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy));
+    }
     return res;
   };
   const isHtml = e.request.mode === 'navigate' ||
