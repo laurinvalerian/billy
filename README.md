@@ -66,6 +66,8 @@ Das Layout ist mobiltauglich (stapelt sich auf schmalen Bildschirmen). Die Wege 
   (`manifest.webmanifest`, `sw.js`, `icon-*.png`); die lokale Einzeldatei-Nutzung auf dem
   MacBook bleibt davon unberührt.
 
+  Gehostete Version: **https://laurinvalerian.github.io/billy/** (GitHub Pages aus diesem Repo).
+
 Hinweis: Der Speicher (Profil, Rechnungsarchiv) ist pro Gerät und Herkunft getrennt –
 zum Übertragen den JSON-Backup-Export verwenden.
 
