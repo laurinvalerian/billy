@@ -51,9 +51,11 @@ details.card[open]>summary::after{transform:rotate(-90deg)}
 label.f{display:flex;flex-direction:column;gap:3px;font-size:11.5px;color:var(--mut);min-width:0}
 input,select,textarea{min-width:0}
 label.f b{font-weight:500}
-input[type=text],input[type=date],input[type=number],input[type=email],select,textarea{
+input[type=text],input[type=date],input[type=time],input[type=number],input[type=email],select,textarea{
   font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;
   background:#fff;color:var(--ink);width:100%}
+/* Datum/Uhrzeit: natives Styling ablegen, damit sie wie die übrigen Felder aussehen */
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-height:36px}
 input:focus,select:focus,textarea:focus{outline:2px solid #f2c3c5;border-color:var(--red)}
 input.bad{border-color:var(--red);background:#fff6f6}
 .checkrow{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink);grid-column:1/-1}
@@ -83,7 +85,7 @@ input.bad{border-color:var(--red);background:#fff6f6}
 .savedRow .amt{color:var(--mut)}
 /* Vorschau */
 #previewArea{background:#e7e7e2;min-height:calc(100vh - 54px);padding:24px;overflow:auto}
-#scaleBox{transform-origin:top left}
+#scaleBox{transform-origin:top left;margin:0 auto}
 #sheet{width:210mm;height:297mm;background:#fff;position:relative;
   box-shadow:0 3px 18px rgba(0,0,0,.18);
   font-family:Helvetica,Arial,"Liberation Sans",sans-serif;color:#000}
@@ -184,7 +186,6 @@ input.bad{border-color:var(--red);background:#fff6f6}
     <div class="cardbody">
       <label class="f wide"><b>Name / Firma (Kontoinhaber/in) *</b><input type="text" id="sName" maxlength="70" placeholder="Muster GmbH"></label>
       <label class="f wide" id="rowArtist"><b>Künstlername (optional)</b><input type="text" id="sArtist" maxlength="70" placeholder="z. B. Stella Nova"></label>
-      <div class="hintline" id="artistHint">Erscheint gross im Briefkopf. Die Zahlung läuft weiter auf den bürgerlichen Namen – er steht im Adressblock und im Zahlteil (muss der Kontoinhaberin bei der Bank entsprechen).</div>
       <label class="f"><b>Strasse</b><input type="text" id="sStreet" maxlength="70" placeholder="Musterstrasse"></label>
       <label class="f"><b>Nr.</b><input type="text" id="sNo" maxlength="16" placeholder="1"></label>
       <label class="f"><b>PLZ *</b><input type="text" id="sZip" maxlength="16" placeholder="8000"></label>
@@ -200,7 +201,6 @@ input.bad{border-color:var(--red);background:#fff6f6}
           <option value="gmbh">GmbH</option>
           <option value="ag">AG</option>
         </select></label>
-      <div class="hintline" id="formHint"></div>
       <label class="f wide"><b>IBAN oder QR-IBAN *</b><input type="text" id="sIban" maxlength="26" placeholder="CH00 0000 0000 0000 0000 0" autocomplete="off" spellcheck="false"></label>
       <div class="hintline" id="ibanHint"></div>
       <label class="f wide" id="rowUid"><b>UID (optional)</b><input type="text" id="sUid" placeholder="CHE-123.456.789"></label>
@@ -245,7 +245,6 @@ input.bad{border-color:var(--red);background:#fff6f6}
       <label class="f"><b>Leistung bis (optional)</b><input type="date" id="rServiceTo"></label>
       <label class="f"><b>Uhrzeit von (optional)</b><input type="time" id="rTimeFrom"></label>
       <label class="f"><b>Uhrzeit bis (optional)</b><input type="time" id="rTimeTo"></label>
-      <div class="hintline">Leistung leer = Rechnungsdatum. Tippen im Format TT.MM.JJJJ oder per Klick im Kalender wählen.</div>
       <label class="f"><b>Zahlungsfrist (Tage)</b><input type="number" id="rDueDays" value="30" min="0" max="120"></label>
       <label class="f"><b>Währung</b>
         <select id="rCurrency"><option>CHF</option><option>EUR</option></select></label>
@@ -648,12 +647,6 @@ function validate(st, totals){
 }
 
 /* ---------- Render ---------- */
-const FORM_HINTS = {
-  privat: 'Keine UID, keine MWST. Honorar in der Steuererklärung angeben; AHV läuft bei Auftritten oft über den Veranstalter, sonst Anmeldung bei der Ausgleichskasse als selbständig im Nebenerwerb.',
-  einzel: 'Entsteht formlos – Handelsregister und MWST sind erst ab CHF 100’000 Jahresumsatz Pflicht. UID angeben, falls vorhanden (aus AHV-, HR- oder MWST-Anmeldung).',
-  gmbh:   'Im Handelsregister eingetragen – die UID (CHE-…) gehört auf die Rechnung, «GmbH» in den Namen.',
-  ag:     'Im Handelsregister eingetragen – die UID (CHE-…) gehört auf die Rechnung, «AG» in den Namen.'
-};
 function render(){
   const st = readState();
   const form = st.sForm || 'privat';
@@ -668,13 +661,11 @@ function render(){
   const artistAllowed = form === 'privat' || form === 'einzel';
   const artist = artistAllowed ? st.sArtist.trim() : '';
   show('rowArtist', artistAllowed);
-  show('artistHint', artistAllowed);
   show('rowUid', vatAllowed);
   show('rowVat', vatAllowed);
   show('rowVatRate', effVat);
   show('rowVatMode', effVat);
   show('rowVatNote', !effVat);
-  $('formHint').textContent = FORM_HINTS[form];
   let uh = '';
   if ((form === 'gmbh' || form === 'ag') && !st.sUid.trim())
     uh = 'UID fehlt – Geschäftskunden erwarten sie auf Rechnungen einer ' + (form === 'ag' ? 'AG' : 'GmbH') + '.';
