@@ -53,11 +53,21 @@ Im Absender lässt sich die Rechtsform wählen – die Rechnung passt sich autom
 
 ## iPhone / Android
 
-Die Datei ist mobiltauglich (das Layout stapelt sich auf schmalen Bildschirmen):
-`billy.html` z. B. per AirDrop aufs iPhone schicken, in der Dateien-App ablegen und von dort
-öffnen – funktioniert offline. Drucken/PDF geht auch mobil über den Teilen-Dialog von Safari.
-Hinweis: Der Browser-Speicher ist beim Öffnen aus der Dateien-App nicht immer dauerhaft –
-für die Ablage der Rechnungen ist das MacBook zuverlässiger.
+Das Layout ist mobiltauglich (stapelt sich auf schmalen Bildschirmen). Die Wege unterscheiden sich:
+
+- **Android:** `billy.html` aufs Gerät kopieren und mit Chrome öffnen – läuft offline,
+  inklusive Speicher.
+- **iPhone:** Safari kann lokale Dateien nicht direkt öffnen (die Dateien-App zeigt HTML nur
+  als eingeschränkte Vorschau). Der saubere Weg ist die **installierbare Web-App (PWA)**:
+  die Dateien dieses Ordners einmal irgendwo hosten (z. B. gratis via GitHub Pages), die URL
+  in Safari öffnen und über Teilen → **«Zum Home-Bildschirm»** hinzufügen. Danach läuft Billy
+  als eigene App **komplett offline**, mit Icon und dauerhaftem Speicher – auf iPhone,
+  Android und auch auf dem Mac. Manifest, Service Worker und Icons liegen bereit
+  (`manifest.webmanifest`, `sw.js`, `icon-*.png`); die lokale Einzeldatei-Nutzung auf dem
+  MacBook bleibt davon unberührt.
+
+Hinweis: Der Speicher (Profil, Rechnungsarchiv) ist pro Gerät und Herkunft getrennt –
+zum Übertragen den JSON-Backup-Export verwenden.
 
 ## Grenzen
 

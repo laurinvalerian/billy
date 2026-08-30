@@ -1,0 +1,14 @@
+{
+  "name": "Billy – QR-Rechnung Schweiz",
+  "short_name": "Billy",
+  "description": "Schweizer Rechnungen mit QR-Zahlteil erstellen – komplett offline.",
+  "start_url": "./billy.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f2f2ee",
+  "theme_color": "#d8232a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
