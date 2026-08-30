@@ -1,5 +1,6 @@
-/* Billy Service Worker – macht die gehostete App offline-fähig (Cache-first). */
-const CACHE = 'billy-v1';
+/* Billy Service Worker – offline-fähig; HTML network-first, damit Updates
+   beim nächsten Öffnen mit Internet automatisch ankommen. */
+const CACHE = 'billy-v2';
 const ASSETS = ['./', './index.html', './billy.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -16,13 +17,25 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then(hit => hit ||
-      fetch(e.request).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, copy));
-        return res;
-      }).catch(() => caches.match('./billy.html'))
-    )
-  );
+  const cachePut = res => {
+    const copy = res.clone();
+    caches.open(CACHE).then(c => c.put(e.request, copy));
+    return res;
+  };
+  const isHtml = e.request.mode === 'navigate' ||
+    (e.request.headers.get('accept') || '').includes('text/html');
+  if (isHtml) {
+    /* Network-first: online immer die neuste Version, offline die letzte gecachte */
+    e.respondWith(
+      fetch(e.request).then(cachePut).catch(() =>
+        caches.match(e.request, { ignoreSearch: true })
+          .then(hit => hit || caches.match('./billy.html'))
+      )
+    );
+  } else {
+    e.respondWith(
+      caches.match(e.request, { ignoreSearch: true })
+        .then(hit => hit || fetch(e.request).then(cachePut))
+    );
+  }
 });

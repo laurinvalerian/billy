@@ -4,13 +4,30 @@ Eine einzelne HTML-Datei, keine Installation, kein Internet nötig. Alle Daten b
 
 ## Benutzung
 
-1. `billy.html` doppelklicken (öffnet sich im Browser, z. B. Safari oder Chrome).
-2. Einmalig den Absender ausfüllen (Name, Adresse, IBAN, ggf. UID) – wird automatisch gespeichert.
-3. Kunde und Positionen erfassen, dann **Drucken / PDF**:
-   - Im Druckdialog **A4**, Skalierung **100 %** (kein «An Seite anpassen»), Ränder «Standard/Keine».
-   - Als PDF sichern («PDF» unten links im macOS-Druckdialog) und per Mail verschicken, oder direkt drucken.
+Gehostete Version (für alle Geräte): **https://laurinvalerian.github.io/billy/**
+Die installierte App aktualisiert sich automatisch, sobald sie mit Internet geöffnet wird;
+offline läuft die zuletzt geladene Version.
 
-`beispiel-rechnung.pdf` zeigt, wie das Resultat aussieht.
+### MacBook
+1. `billy.html` doppelklicken (lokal, ohne Internet) – oder die gehostete URL öffnen.
+2. Einmalig den Absender ausfüllen (Name, Adresse, IBAN, ggf. UID) – wird automatisch gespeichert.
+3. Kunde und Positionen erfassen → **Drucken / PDF** → unten links «Als PDF sichern»
+   (A4, Skalierung 100 %, bei Drucker mit Rändern Papierformat «DIN A4 randlos») → PDF per Mail verschicken.
+
+### iPhone
+1. Die gehostete URL in **Safari** öffnen.
+2. Teilen-Symbol → **«Zum Home-Bildschirm»** → Hinzufügen.
+3. «Billy» vom Home-Bildschirm starten – läuft ab jetzt auch offline, mit eigenem Speicher.
+4. Rechnung erstellen → **Drucken / PDF** → im Druckdialog oben «Als PDF» teilen/sichern.
+   Falls der Druckdialog in der installierten App nicht erscheint: die Seite kurz in Safari
+   öffnen und von dort drucken.
+
+### Android
+1. Die gehostete URL in **Chrome** öffnen (oder `billy.html` aufs Gerät kopieren und mit Chrome öffnen).
+2. Menü ⋮ → **«App installieren»** (bzw. «Zum Startbildschirm hinzufügen»).
+3. Rechnung erstellen → **Drucken / PDF** → als Ziel «Als PDF speichern» wählen.
+
+`beispiel-rechnung.pdf` zeigt, wie das Resultat aussieht (fiktive Daten).
 
 ## Rechtsform-Auswahl
 
