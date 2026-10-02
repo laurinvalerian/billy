@@ -68,18 +68,20 @@ Im Absender lässt sich die Rechtsform wählen – die Rechnung passt sich autom
   beiden Währungen).
 - **Kunde im Ausland** (Land nicht Schweiz/Liechtenstein): Zusätzlich zum Zahlteil kommt eine
   **Bankverbindung** mit Kontoinhaber/in, IBAN, BIC und Zahlungszweck auf die Rechnung, denn
-  ausländische Banking-Apps können den Swiss QR Code meist nicht lesen. Abschaltbar in den
-  Rechnungsdetails.
+  ausländische Banking-Apps können den Swiss QR Code meist nicht lesen. Dafür braucht es die
+  **BIC/SWIFT** im Absender (Banken im Ausland verlangen sie für Zahlungen in die Schweiz).
+  Abschaltbar in den Rechnungsdetails.
 - **EUR an eine Firma im SEPA-Raum** (z. B. Deutschland, Österreich): Die Bankverbindung enthält
   zusätzlich einen **EPC-QR (GiroCode)**. Die Firma scannt ihn mit ihrer Banking-App und zahlt per
-  SEPA-Überweisung in EUR. Für eine Schweizer IBAN gehört die BIC in den Code, deshalb erscheint
-  er erst, wenn die BIC im Absender eingetragen ist.
+  SEPA-Überweisung in EUR. Für eine Schweizer IBAN gehört die BIC in den Code.
 - **Andere Währungen** (USD, GBP, JPY, CAD, AUD, SEK, NOK, DKK, PLN und weitere): Statt des
   Zahlteils steht die Bankverbindung auf der Rechnung, für eine internationale Überweisung.
   Dafür braucht es die **BIC/SWIFT** im Absender. Ohne Zahlteil hat der Brief mehr Platz.
 - **Eigenes Konto pro Währung** (optional): Wer z. B. ein EUR-Konto hat, trägt dessen IBAN unter
-  «Eigenes Konto für EUR» ein. Billy merkt sich das pro Währung. Leer bleibt die IBAN aus dem
-  Absender; bei einem CHF-Konto rechnet die Bank den Betrag in CHF um.
+  «Eigenes Konto für EUR» ein, bei einer anderen Bank auch dessen BIC. Billy merkt sich das pro
+  Währung. Leer bleibt die IBAN aus dem Absender; bei einem CHF-Konto rechnet die Bank den Betrag
+  in CHF um. Ein Konto im Ausland (z. B. ein USD-Konto bei einer ausländischen Bank) gehört
+  ebenfalls hierhin, die IBAN im Absender bleibt eine CH/LI-IBAN.
 - Eine **QR-IBAN** kann keine Zahlungen aus dem Ausland empfangen. Für Kunden im Ausland oder
   Fremdwährungen die normale IBAN des Kontos verwenden. Ab 14.11.2026 (SIX v2.4) ist die QR-IBAN
   zudem nur noch für CHF vorgesehen; für EUR die normale IBAN unter «Eigenes Konto für EUR» eintragen.
