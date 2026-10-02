@@ -92,12 +92,16 @@ Im Absender lässt sich die Rechtsform wählen – die Rechnung passt sich autom
   also Absender, Kunde, Rechnungsdetails, Positionen, Texte, Währung, Konto und alle Häkchen.
   Ein Tipp auf die Vorlage übernimmt alles 1:1 als neue Rechnung; nur Rechnungsnummer und
   Rechnungsdatum werden neu gesetzt, damit keine gespeicherte Rechnung überschrieben wird.
-  Gleicher Name ersetzt die Vorlage. Da auch der Absender drin ist: Nach einer Änderung im
-  Absender (z. B. neue IBAN) die Vorlage neu speichern.
+  Gleicher Name ersetzt die Vorlage. Weicht der Absender in der Vorlage vom aktuellen ab
+  (z. B. alte IBAN oder Adresse), fragt Billy nach: OK übernimmt ihn, Abbrechen behält den
+  aktuellen Absender und übernimmt den Rest der Vorlage.
 - **Gespeicherte Rechnungen** («Speichern» bzw. automatisch beim Drucken) lassen sich ebenfalls
-  vollständig wieder laden, mit ihrer ursprünglichen Nummer und ihrem Datum.
-- **Bekannte Kunden:** Wird ein Kunde aus der Vorschlagsliste gewählt, übernimmt Billy dessen
-  Adresse aus der letzten Rechnung (oder Vorlage), solange die Adressfelder noch leer sind.
+  vollständig wieder laden, mit ihrer ursprünglichen Nummer und ihrem Datum (gleiche Rückfrage
+  beim Absender). Ist unter einer Nummer schon eine Rechnung an einen anderen Kunden gespeichert,
+  fragt Billy vor dem Ersetzen.
+- **Bekannte Kunden:** Wird ein Kunde aus der Vorschlagsliste gewählt, übernimmt Billy beim
+  Verlassen des Felds dessen Adresse samt Land aus der neusten Rechnung oder Vorlage, solange die
+  Adressfelder noch leer sind.
 - Vorlagen sind im Backup enthalten.
 
 ## Daten & Backup
