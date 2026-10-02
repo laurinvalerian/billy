@@ -183,7 +183,8 @@ input.bad{border-color:var(--red);background:#fff6f6}
   #sheet.noqr .lbody{height:auto;bottom:20mm}
 }
 /* ---------- Mobil ---------- */
-@media (max-width:920px){
+/* nur Bildschirm: A4 misst im Druck ~794px und würde sonst das Druck-Padding überschreiben */
+@media screen and (max-width:920px){
   main{grid-template-columns:1fr}
   #form{max-height:none;overflow:visible}
   #previewArea{min-height:0;padding:14px}
@@ -575,6 +576,7 @@ const LS = { profile:'billy_profile', invoices:'billy_invoices', seq:'billy_seq'
    curAccFor = Währung, zu der der aktuelle Inhalt der Felder «rIbanCur»/«rBicCur» gehört. */
 let curAccounts = {};
 let curAccFor = null;
+let curAccDirty = false;  /* Felder seit dem Laden von Hand geändert */
 /* Beim Währungswechsel die Felder aus dem Profil füllen */
 function syncCurAccount(){
   const cur = $('rCurrency').value;
@@ -583,13 +585,16 @@ function syncCurAccount(){
   $('rIbanCur').value = a.iban || '';
   $('rBicCur').value = a.bic || '';
   curAccFor = cur;
+  curAccDirty = false;
 }
 /* Nur echte Eingaben ins Profil übernehmen; eine geladene Rechnung ändert das Profil nicht */
 function rememberCurAccount(){
   const cur = $('rCurrency').value;
   if (cur === 'CHF' || cur !== curAccFor) return;
-  const iban = $('rIbanCur').value.trim(), bic = $('rBicCur').value.trim();
-  if (iban || bic) curAccounts[cur] = { iban, bic }; else delete curAccounts[cur];
+  const iban = $('rIbanCur').value.trim();
+  /* ohne IBAN keine versteckte BIC behalten, sonst taucht sie beim nächsten Konto wieder auf */
+  if (!iban){ $('rBicCur').value = ''; delete curAccounts[cur]; return; }
+  curAccounts[cur] = { iban, bic: $('rBicCur').value.trim() };
 }
 
 function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
@@ -698,6 +703,7 @@ function applyState(st, fields){
   if (st.curAccounts && typeof st.curAccounts === 'object') curAccounts = {...st.curAccounts};
   /* Gespeicherte Rechnung bringt ihr Währungskonto mit, sonst aus dem Profil nachladen */
   curAccFor = (fields.includes('rIbanCur') && st.rIbanCur !== undefined) ? $('rCurrency').value : null;
+  curAccDirty = false;
   if (st.items){
     $('items').innerHTML = '';
     st.items.forEach(addItemRow);
@@ -736,10 +742,13 @@ function payContext(st){
   const mainIban = B.cleanIban(st.sIban);
   const ownIban = cur !== 'CHF' ? B.cleanIban(st.rIbanCur) : '';
   const iban = ownIban || mainIban;
-  /* BIC: eigene BIC des Währungskontos, sonst die aus dem Absender (gleiche Bank) */
+  /* BIC: eigene BIC des Währungskontos, sonst die aus dem Absender, aber nur bei derselben Bank
+     (gleiches Land und gleiche Instituts-ID wie die IBAN im Absender) */
+  const sameBank = !ownIban || (!!mainIban && ownIban.slice(0,2) === mainIban.slice(0,2) &&
+                                ownIban.slice(4,9) === mainIban.slice(4,9));
   const ownBic = ownIban ? B.cleanBic(st.rBicCur) : '';
-  const bic = ownBic || B.cleanBic(st.sBic);
-  const bankName = ownBic ? '' : st.sBank.trim();
+  const bic = ownBic || (sameBank ? B.cleanBic(st.sBic) : '');
+  const bankName = ownBic || !sameBank ? '' : st.sBank.trim();
   const cCC = countryCode(st.cCountry) || 'CH';
   const abroad = cCC !== 'CH' && cCC !== 'LI';
   const qrIban = B.isQrIban(iban);
@@ -752,10 +761,10 @@ function payContext(st){
   /* Für eine Schweizer IBAN (ausserhalb EWR) gehört die BIC zwingend in den EPC-QR */
   const epcMissingBic = epcWanted && !bic && B.epcNeedsBic(iban);
   const epc = epcWanted && !epcMissingBic;
-  /* Zahler im Ausland brauchen die BIC; nur innerhalb des EWR genügt die IBAN */
-  const bicRequired = bank && !(B.inEea(iban.slice(0,2)) && B.inEea(cCC));
+  /* Zahler im Ausland brauchen die BIC; nur bei SEPA (EUR) innerhalb des EWR genügt die IBAN */
+  const bicRequired = bank && !(cur === 'EUR' && B.inEea(iban.slice(0,2)) && B.inEea(cCC));
   return { cur, qrCur, mainIban, ownIban, iban, cCC, abroad, qrIban, bankOptional, bank, epc,
-           epcMissingBic, bic, ownBic, bankName, bicRequired };
+           epcMissingBic, bic, ownBic, sameBank, bankName, bicRequired };
 }
 
 /* ---------- QR-SVG ---------- */
@@ -814,6 +823,8 @@ function validate(st, totals, pc){
   /* BIC nur prüfen, wenn sie auf die Rechnung kommt */
   if (pc.bank && pc.bic && !B.bicValid(pc.bic))
     errs.push((pc.ownBic ? `BIC des ${cur}-Kontos` : 'BIC/SWIFT') + ' ist ungültig (8 oder 11 Zeichen, z. B. POFICHBEXXX).');
+  else if (pc.bicRequired && !pc.bic && !pc.sameBank)
+    errs.push(`BIC des ${cur}-Kontos fehlt: Das Konto liegt bei einer anderen Bank als die IBAN im Absender (Feld «BIC dieses Kontos»).`);
   else if (pc.bicRequired && !pc.bic)
     errs.push(pc.qrCur
       ? 'Absender: BIC/SWIFT der Bank fehlt. Banken im Ausland brauchen sie für die Überweisung (oder die Bankverbindung für das Ausland abwählen).'
@@ -888,8 +899,8 @@ function render(){
     ? `Die BIC gehört zu einer Bank in ${bic.slice(4,6)}, die IBAN zu ${iban.slice(0,2)}. Bitte prüfen.` : '';
   let bh = '';
   if (bicBad) bh = 'Ungültige BIC (8 oder 11 Zeichen).';
-  else if (!pc.ownBic && bicMismatch(sBic, pc.iban)) bh = bicMismatch(sBic, pc.iban);
-  else if (!pc.bic && pc.bank)
+  else if (bicMismatch(sBic, pc.mainIban)) bh = bicMismatch(sBic, pc.mainIban);
+  else if (!sBic && pc.sameBank && (pc.bicRequired || pc.epcMissingBic))
     bh = pc.epcMissingBic ? 'BIC ergänzen: Sie gehört in den EPC-QR, und Banken im Ausland brauchen sie für die Überweisung.'
                           : 'BIC ergänzen: Banken im Ausland brauchen sie für die Überweisung.';
   $('sBic').classList.toggle('bad', bicBad);
@@ -905,14 +916,16 @@ function render(){
   const ownBicBad = !!pc.ownBic && !B.bicValid(pc.ownBic);
   let oh = '';
   if (cur !== 'CHF'){
-    if (!pc.ownIban) oh = `Leer lassen: Die Zahlung geht auf die IBAN im Absender. Ist das ein CHF-Konto, rechnet die Bank ${cur} in CHF um.`;
+    if (!pc.ownIban && pc.qrIban && (!pc.qrCur || (pc.bankOptional && st.rIntl)))
+      oh = 'Im Absender steht eine QR-IBAN: hier die normale IBAN des Kontos eintragen.';
+    else if (!pc.ownIban) oh = `Leer: Die Zahlung geht auf die IBAN im Absender. Ist das ein CHF-Konto, rechnet die Bank ${cur} in CHF um.`;
     else if (ownBad) oh = pc.qrCur ? 'Ungültige IBAN (für den QR-Zahlteil braucht es eine CH/LI-IBAN).' : 'Ungültige IBAN.';
     else if (ownBicBad) oh = 'Ungültige BIC (8 oder 11 Zeichen).';
     else if (pc.ownBic && bicMismatch(pc.ownBic, pc.ownIban)) oh = bicMismatch(pc.ownBic, pc.ownIban);
-    else if (!pc.ownBic && bicMismatch(pc.bic, pc.ownIban))
-      oh = `Die BIC aus dem Absender gehört zu einer Bank in ${pc.bic.slice(4,6)}, dieses Konto liegt in ${pc.ownIban.slice(0,2)}. BIC dieses Kontos eintragen.`;
+    else if (!pc.ownBic && !pc.sameBank)
+      oh = 'Dieses Konto liegt bei einer anderen Bank als die IBAN im Absender: BIC dieses Kontos eintragen.';
     else oh = `Wird für ${cur} gemerkt und auf allen ${cur}-Rechnungen verwendet.` +
-      (pc.ownBic ? '' : ' Liegt das Konto bei einer anderen Bank als im Absender, die BIC dieses Kontos eintragen.');
+      (pc.ownBic ? '' : ' Gleiche Bank wie im Absender, es gilt dessen BIC.');
   }
   $('rIbanCur').classList.toggle('bad', ownBad);
   $('rBicCur').classList.toggle('bad', ownBicBad);
@@ -932,12 +945,14 @@ function render(){
       (cur !== 'CHF' ? `Für Kunden im Ausland die normale IBAN unter «Eigenes Konto für ${cur}» eintragen.`
                      : 'Für Kunden im Ausland die normale IBAN des Kontos verwenden.');
   else if (pc.epc)
-    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil stehen IBAN, BIC und ein EPC-QR (GiroCode) auf der Rechnung. Damit zahlt die Firma per SEPA-Überweisung in EUR.';
+    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil stehen IBAN' + (pc.bic ? ', BIC' : '') +
+      ' und ein EPC-QR (GiroCode) auf der Rechnung. Damit zahlt der Kunde per SEPA-Überweisung in EUR.';
   else if (pc.epcMissingBic)
     ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil steht die Bankverbindung auf der Rechnung. Der EPC-QR (GiroCode) erscheint, sobald die BIC im Absender eingetragen ist.';
   else if (pc.bank)
-    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil stehen IBAN und BIC auf der Rechnung, für eine Überweisung aus dem Ausland.' +
-      (cur === 'CHF' && B.inSepa(pc.cCC) ? ' Tipp: Kunden in der EU zahlen am einfachsten in EUR (SEPA-Überweisung mit EPC-QR).' : '');
+    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil ' + (pc.bic ? 'stehen IBAN und BIC' : 'steht die IBAN') +
+      ' auf der Rechnung, für eine Überweisung aus dem Ausland.' +
+      (cur === 'CHF' && B.inSepa(pc.cCC) ? ' Tipp: Kunden im SEPA-Raum (EU, Grossbritannien u. a.) zahlen am einfachsten in EUR (SEPA-Überweisung mit EPC-QR).' : '');
   /* SIX IG v2.4 (ab 14.11.2026): QR-IBAN mit QR-Referenz nur noch für CHF */
   if (cur === 'EUR' && pc.qrIban && !(pc.bankOptional && st.rIntl))
     ih = (ih ? ih + ' ' : '') + 'Hinweis: Ab 14.11.2026 (SIX v2.4) ist die QR-IBAN nur noch für CHF vorgesehen. Für EUR die normale IBAN unter «Eigenes Konto für EUR» eintragen.';
@@ -1222,16 +1237,17 @@ function init(){
   for (const id of ['sIban','rIbanCur']) $(id).addEventListener('blur', () => {
     const v = B.cleanIban($(id).value);
     if (v) $(id).value = B.fmtIban(v);
-    if (id === 'rIbanCur') rememberCurAccount();
+    if (id === 'rIbanCur' && curAccDirty) rememberCurAccount();
     render();
   });
   for (const id of ['sBic','rBicCur']) $(id).addEventListener('blur', () => {
     $(id).value = B.cleanBic($(id).value);
-    if (id === 'rBicCur') rememberCurAccount();
+    if (id === 'rBicCur' && curAccDirty) rememberCurAccount();
     render();
   });
   /* läuft vor dem allgemeinen input-Listener (Bubbling), damit render() das Profil aktuell speichert */
-  for (const id of ['rIbanCur','rBicCur']) $(id).addEventListener('input', rememberCurAccount);
+  for (const id of ['rIbanCur','rBicCur'])
+    $(id).addEventListener('input', () => { curAccDirty = true; rememberCurAccount(); });
   $('btnAddItem').addEventListener('click', () => { addItemRow(); render(); });
   $('btnNew').addEventListener('click', newInvoice);
   $('btnSave').addEventListener('click', () => { saveInvoice(); });
