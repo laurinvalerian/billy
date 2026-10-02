@@ -57,8 +57,32 @@ Im Absender lässt sich die Rechtsform wählen – die Rechnung passt sich autom
 - **MWST-konform (Art. 26 MWSTG)**: UID mit Zusatz «MWST», Leistungsdatum, Satz und Steuerbetrag
   ausgewiesen. Sätze: 8.1 % Normalsatz, 2.6 % reduziert, 3.8 % Beherbergung (Stand 2026).
   Wer nicht MWST-pflichtig ist, lässt das Häkchen einfach weg.
+- **EPC-QR (GiroCode) nach EPC069-12 v3.1**: Version 002, UTF-8, Fehlerkorrektur M, höchstens
+  331 Byte, BIC bei Schweizer IBAN, Betrag im Format der Deutschen Kreditwirtschaft (z. B. EUR500).
 - Zeichensatz, Feldlängen und Betragsgrenzen des Standards werden geprüft; Drucken ist erst
   möglich, wenn alle Pflichtangaben gültig sind.
+
+## Währungen und Kunden im Ausland
+
+- **CHF und EUR** laufen wie bisher über den QR-Zahlteil (der Swiss QR Code erlaubt nur diese
+  beiden Währungen).
+- **Kunde im Ausland** (Land nicht Schweiz/Liechtenstein): Zusätzlich zum Zahlteil kommt eine
+  **Bankverbindung** mit Kontoinhaber/in, IBAN, BIC und Zahlungszweck auf die Rechnung, denn
+  ausländische Banking-Apps können den Swiss QR Code meist nicht lesen. Abschaltbar in den
+  Rechnungsdetails.
+- **EUR an eine Firma im SEPA-Raum** (z. B. Deutschland, Österreich): Die Bankverbindung enthält
+  zusätzlich einen **EPC-QR (GiroCode)**. Die Firma scannt ihn mit ihrer Banking-App und zahlt per
+  SEPA-Überweisung in EUR. Für eine Schweizer IBAN gehört die BIC in den Code, deshalb erscheint
+  er erst, wenn die BIC im Absender eingetragen ist.
+- **Andere Währungen** (USD, GBP, JPY, CAD, AUD, SEK, NOK, DKK, PLN und weitere): Statt des
+  Zahlteils steht die Bankverbindung auf der Rechnung, für eine internationale Überweisung.
+  Dafür braucht es die **BIC/SWIFT** im Absender. Ohne Zahlteil hat der Brief mehr Platz.
+- **Eigenes Konto pro Währung** (optional): Wer z. B. ein EUR-Konto hat, trägt dessen IBAN unter
+  «Eigenes Konto für EUR» ein. Billy merkt sich das pro Währung. Leer bleibt die IBAN aus dem
+  Absender; bei einem CHF-Konto rechnet die Bank den Betrag in CHF um.
+- Eine **QR-IBAN** kann keine Zahlungen aus dem Ausland empfangen. Für Kunden im Ausland oder
+  Fremdwährungen die normale IBAN des Kontos verwenden. Ab 14.11.2026 (SIX v2.4) ist die QR-IBAN
+  zudem nur noch für CHF vorgesehen; für EUR die normale IBAN unter «Eigenes Konto für EUR» eintragen.
 
 ## Daten & Backup
 
@@ -92,4 +116,4 @@ zum Übertragen den JSON-Backup-Export verwenden.
 
 - Eine Rechnung = eine A4-Seite (bei zu vielen Positionen warnt die App).
 - Ein MWST-Satz pro Rechnung.
-- Rechnungen in CHF oder EUR.
+- QR-Zahlteil nur in CHF oder EUR; andere Währungen mit Bankverbindung statt Zahlteil.
