@@ -123,8 +123,24 @@ input.bad{border-color:var(--red);background:#fff6f6}
 #sheet .totals .grand::before{content:"";position:absolute;top:0;left:.2mm;right:1.2mm;border-top:1pt solid #000}
 #sheet .totals .sub{border-bottom:.25pt solid #ddd}
 #sheet .vatnote{margin-top:1.5mm;font-size:8.5pt;color:#333;text-align:right}
-#sheet .paynote{margin-top:6mm;font-size:9.5pt}
-#sheet .closing{margin-top:4mm;font-size:9.5pt}
+#sheet .paynote{margin-top:6mm;margin-bottom:0;font-size:9.5pt}
+#sheet .closing{margin-top:4mm;margin-bottom:0;font-size:9.5pt}
+/* Bankverbindung für Zahlungen aus dem Ausland bzw. in Fremdwährung (ohne QR-Zahlteil) */
+#sheet .bank{margin-top:3mm;display:flex;gap:5mm;align-items:flex-start;font-size:9pt;line-height:1.3}
+#sheet .bank:empty{display:none}
+#sheet .bank .bk-text{flex:1;min-width:0}
+#sheet .bank .bk-title{font-weight:700;font-size:9.5pt;margin-bottom:.6mm}
+#sheet .bank .bk-grid{display:grid;grid-template-columns:30mm 1fr;gap:.2mm 3mm}
+#sheet .bank .k{color:#333}
+#sheet .bank .bk-sep{display:inline-block;width:5mm}
+#sheet .bank .bk-cap{margin-top:1mm;font-size:8pt;color:#333}
+#sheet .bank .bk-qr{flex:none;width:25mm;height:25mm}
+#sheet .bank .bk-qr svg{display:block;width:100%;height:100%}
+#sheet .bank .bk-qr .placeholder{width:100%;height:100%;border:1px dashed #bbb;color:#999;font-size:6.5pt;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:2mm}
+/* Fremdwährung: Swiss QR Code erlaubt nur CHF/EUR, daher kein Zahlteil und mehr Platz für den Brief */
+#sheet.noqr .qrbill{display:none}
+#sheet.noqr .lbody{height:197mm}
 /* ---------- QR-Rechnung (Zahlteil) ---------- */
 .qrbill{position:absolute;left:0;bottom:0;width:210mm;height:105mm;background:#fff;
   border-top:.75pt dashed #000;font-family:Helvetica,Arial,"Liberation Sans",sans-serif}
@@ -164,6 +180,7 @@ input.bad{border-color:var(--red);background:#fff6f6}
   #sheet{box-shadow:none;margin:0;width:100%;height:100%;overflow:hidden}
   /* Brieftext endet immer oberhalb des Zahlteils, auch bei kleinerer Seitenbox */
   #sheet .lbody{height:auto;bottom:106mm}
+  #sheet.noqr .lbody{height:auto;bottom:20mm}
 }
 /* ---------- Mobil ---------- */
 @media (max-width:920px){
@@ -213,6 +230,9 @@ input.bad{border-color:var(--red);background:#fff6f6}
         </select></label>
       <label class="f wide"><b>IBAN oder QR-IBAN *</b><input type="text" id="sIban" maxlength="26" placeholder="CH00 0000 0000 0000 0000 0" autocomplete="off" spellcheck="false"></label>
       <div class="hintline" id="ibanHint"></div>
+      <label class="f"><b>BIC / SWIFT</b><input type="text" id="sBic" maxlength="14" placeholder="z. B. POFICHBEXXX" autocomplete="off" spellcheck="false"></label>
+      <label class="f"><b>Bank (optional)</b><input type="text" id="sBank" maxlength="70" placeholder="z. B. PostFinance AG, Bern"></label>
+      <div class="hintline" id="bicHint"></div>
       <label class="f wide" id="rowUid"><b>UID (optional)</b><input type="text" id="sUid" placeholder="CHE-123.456.789"></label>
       <div class="hintline" id="uidHint"></div>
       <div class="checkrow" id="rowVat"><input type="checkbox" id="sVat"><label for="sVat">MWST-pflichtig (UID erscheint mit Zusatz «MWST»)</label></div>
@@ -256,13 +276,16 @@ input.bad{border-color:var(--red);background:#fff6f6}
       <label class="f"><b>Uhrzeit von (optional)</b><input type="time" id="rTimeFrom"></label>
       <label class="f"><b>Uhrzeit bis (optional)</b><input type="time" id="rTimeTo"></label>
       <label class="f"><b>Zahlungsfrist (Tage)</b><input type="number" id="rDueDays" value="30" min="0" max="120"></label>
-      <label class="f"><b>Währung</b>
-        <select id="rCurrency"><option>CHF</option><option>EUR</option></select></label>
-      <label class="f"><b>Sprache Zahlteil</b>
+      <label class="f"><b id="lblLang">Sprache Zahlteil</b>
         <select id="rLang"><option value="de">Deutsch</option><option value="fr">Français</option>
         <option value="it">Italiano</option><option value="en">English</option></select></label>
-      <label class="f"><b>&nbsp;</b><span></span></label>
-      <label class="f wide"><b>Zusätzliche Informationen (Zahlteil)</b><input type="text" id="rMessage" maxlength="140"></label>
+      <label class="f wide"><b>Währung</b>
+        <select id="rCurrency"><option value="CHF">CHF (Schweizer Franken)</option><option value="EUR">EUR (Euro)</option></select></label>
+      <label class="f wide" id="rowIbanCur"><b id="lblIbanCur">Eigenes Konto für diese Währung (IBAN, optional)</b><input type="text" id="rIbanCur" maxlength="42" autocomplete="off" spellcheck="false"></label>
+      <div class="hintline" id="ibanCurHint"></div>
+      <div class="checkrow" id="rowIntl"><input type="checkbox" id="rIntl" checked><label for="rIntl" id="lblIntl">Bankverbindung für Zahlungen aus dem Ausland drucken</label></div>
+      <div class="hintline" id="intlHint"></div>
+      <label class="f wide"><b id="lblMessage">Zusätzliche Informationen (Zahlteil)</b><input type="text" id="rMessage" maxlength="140"></label>
       <label class="f wide"><b>Schlusstext</b><input type="text" id="rClosing" value="Vielen Dank für Ihren Auftrag."></label>
     </div>
   </details>
@@ -307,6 +330,7 @@ input.bad{border-color:var(--red);background:#fff6f6}
         <div class="totals" id="vTotals"></div>
         <div class="vatnote" id="vVatNote"></div>
         <p class="paynote" id="vPaynote"></p>
+        <div class="bank" id="vBank"></div>
         <p class="closing" id="vClosing"></p>
       </div>
 
@@ -371,7 +395,7 @@ const Billy = (() => {
   /* QR-IBAN: IID 30000–31999 → verlangt QR-Referenz (QRR) */
   function isQrIban(raw){
     const i = cleanIban(raw);
-    if (i.length !== 21) return false;
+    if (i.length !== 21 || !/^(CH|LI)/.test(i)) return false;
     const iid = parseInt(i.slice(4,9),10);
     return iid >= 30000 && iid <= 31999;
   }
@@ -418,18 +442,67 @@ const Billy = (() => {
     return lines.join('\n');
   }
 
+  /* Währungen: Der Swiss QR Code kennt nur CHF und EUR (qr), alle anderen laufen
+     über die Bankverbindung. Dezimalstellen nach ISO 4217. */
+  const CURRENCIES = [
+    ['CHF','Schweizer Franken',2,true], ['EUR','Euro',2,true],
+    ['USD','US-Dollar',2], ['GBP','Britisches Pfund',2], ['JPY','Japanischer Yen',0],
+    ['CAD','Kanadischer Dollar',2], ['AUD','Australischer Dollar',2], ['NZD','Neuseeland-Dollar',2],
+    ['SEK','Schwedische Krone',2], ['NOK','Norwegische Krone',2], ['DKK','Dänische Krone',2],
+    ['PLN','Polnischer Złoty',2], ['CZK','Tschechische Krone',2], ['HUF','Ungarischer Forint',2],
+    ['CNY','Chinesischer Yuan',2], ['HKD','Hongkong-Dollar',2], ['SGD','Singapur-Dollar',2],
+    ['AED','VAE-Dirham',2], ['INR','Indische Rupie',2], ['BRL','Brasilianischer Real',2],
+    ['MXN','Mexikanischer Peso',2], ['ZAR','Südafrikanischer Rand',2]
+  ].map(([code,name,dec,qr]) => ({code, name, dec, qr: !!qr}));
+  const CUR_BY_CODE = Object.fromEntries(CURRENCIES.map(c => [c.code, c]));
+  const curInfo = code => CUR_BY_CODE[code] || {code, name:code, dec:2, qr:false};
+  const curDec = code => curInfo(code).dec;
+  const qrCurrency = code => curInfo(code).qr;
+
+  /* BIC (ISO 9362): 4 Institut, 2 Land, 2 Ort, optional 3 Filiale */
+  function cleanBic(s){ return (s||'').replace(/\s+/g,'').toUpperCase(); }
+  function bicValid(raw){ return /^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(cleanBic(raw)); }
+
+  /* SEPA-Raum nach EPC-Länderliste (EPC409-09 v8.0): EWR und 11 Länder ausserhalb (CH, GB u. a.),
+     dazu Kronbesitzungen und Gebiete, die im Adressfeld einen eigenen ISO-Code haben (z. B. Réunion).
+     Ausserhalb des EWR verlangt der EPC-QR die BIC. */
+  const EEA = ('AT BE BG CY CZ DE DK EE ES FI FR GR HR HU IE IT LT LU LV MT NL PL PT RO SE SI SK IS LI NO ' +
+    'AX GF GP MQ RE YT MF').split(' ');
+  const SEPA = new Set([...EEA, ...'CH GB MC SM VA AD AL MD ME MK RS GI JE GG IM PM BL'.split(' ')]);
+  const inSepa = cc => SEPA.has((cc||'').toUpperCase());
+  const epcNeedsBic = iban => !EEA.includes(cleanIban(iban).slice(0,2));
+
+  /* EPC-QR («GiroCode», EPC069-12) für eine SEPA-Überweisung in EUR: Version 002, UTF-8,
+     Felder mit LF getrennt, leere Felder am Ende entfallen, höchstens 331 Byte.
+     Betrag ohne Nullen am Ende (EUR500, EUR12.3) gemäss Richtlinie der Deutschen Kreditwirtschaft. */
+  const epcAmount = n => 'EUR' + n.toFixed(2).replace(/\.?0+$/, '');
+  function buildEpcPayload(d){
+    const utf8Len = s => new TextEncoder().encode(s).length;
+    let text = cut(d.text,140);
+    const make = () => {
+      const lines = ['BCD','002','1','SCT', cleanBic(d.bic), cut(d.name,70), cleanIban(d.iban),
+        d.amount ? epcAmount(d.amount) : '', '', '', text];
+      while (lines[lines.length - 1] === '') lines.pop();
+      return lines.join('\n');
+    };
+    let p = make();
+    while (utf8Len(p) > 331 && text){ text = text.slice(0,-1).trim(); p = make(); }
+    return p;
+  }
+
   /* Formatierung */
-  const round2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
+  const roundTo = (n, dec) => { const f = Math.pow(10, dec); return Math.round((n + Number.EPSILON) * f) / f; };
+  const round2 = n => roundTo(n, 2);
   function groupInt(intStr, sep){ return intStr.replace(/\B(?=(\d{3})+(?!\d))/g, sep); }
   /* Zahlteil: Tausender mit Leerzeichen (Style Guide) */
   function fmtAmountPay(n){
     const [i,f] = n.toFixed(2).split('.');
     return groupInt(i,'\u00A0') + '.' + f;
   }
-  /* Briefteil: Schweizer Schreibweise mit Apostroph */
-  function fmtAmountLetter(n){
-    const [i,f] = n.toFixed(2).split('.');
-    return groupInt(i,"'") + '.' + f;
+  /* Briefteil: Schweizer Schreibweise mit Apostroph, Dezimalstellen je Währung */
+  function fmtAmountLetter(n, dec = 2){
+    const [i,f] = n.toFixed(dec).split('.');
+    return groupInt(i,"'") + (f ? '.' + f : '');
   }
   function fmtIban(raw){ return cleanIban(raw).replace(/(.{4})/g,'$1 ').trim(); }
   function fmtQrr(ref){
@@ -455,18 +528,27 @@ const Billy = (() => {
 
   const LANG = {
     de:{pay:'Zahlteil',rec:'Empfangsschein',acct:'Konto / Zahlbar an',ref:'Referenz',
-        info:'Zusätzliche Informationen',by:'Zahlbar durch',cur:'Währung',amt:'Betrag',acc:'Annahmestelle'},
+        info:'Zusätzliche Informationen',by:'Zahlbar durch',cur:'Währung',amt:'Betrag',acc:'Annahmestelle',
+        bank:'Bankverbindung',holder:'Kontoinhaber/in',bic:'BIC/SWIFT',bankName:'Bank',purpose:'Zahlungszweck',
+        epc:'EPC-QR (GiroCode): mit der Banking-App scannen und per SEPA-Überweisung in EUR zahlen.'},
     fr:{pay:'Section paiement',rec:'Récépissé',acct:'Compte / Payable à',ref:'Référence',
-        info:'Informations supplémentaires',by:'Payable par',cur:'Monnaie',amt:'Montant',acc:'Point de dépôt'},
+        info:'Informations supplémentaires',by:'Payable par',cur:'Monnaie',amt:'Montant',acc:'Point de dépôt',
+        bank:'Coordonnées bancaires',holder:'Titulaire du compte',bic:'BIC/SWIFT',bankName:'Banque',purpose:'Motif du paiement',
+        epc:'Code QR EPC (GiroCode) : scanner avec l’app bancaire et payer en EUR par virement SEPA.'},
     it:{pay:'Sezione pagamento',rec:'Ricevuta',acct:'Conto / Pagabile a',ref:'Riferimento',
-        info:'Informazioni supplementari',by:'Pagabile da',cur:'Valuta',amt:'Importo',acc:'Punto di accettazione'},
+        info:'Informazioni supplementari',by:'Pagabile da',cur:'Valuta',amt:'Importo',acc:'Punto di accettazione',
+        bank:'Coordinate bancarie',holder:'Titolare del conto',bic:'BIC/SWIFT',bankName:'Banca',purpose:'Causale',
+        epc:'Codice QR EPC (GiroCode): scansionare con l’app bancaria e pagare in EUR con bonifico SEPA.'},
     en:{pay:'Payment part',rec:'Receipt',acct:'Account / Payable to',ref:'Reference',
-        info:'Additional information',by:'Payable by',cur:'Currency',amt:'Amount',acc:'Acceptance point'}
+        info:'Additional information',by:'Payable by',cur:'Currency',amt:'Amount',acc:'Acceptance point',
+        bank:'Bank details',holder:'Account holder',bic:'BIC/SWIFT',bankName:'Bank',purpose:'Payment reference',
+        epc:'EPC QR code (GiroCode): scan with your banking app to pay in EUR by SEPA credit transfer.'}
   };
 
   return { mod10CheckDigit, makeQrrRef, qrrValid, cleanIban, ibanValid, qrAccountOk, isQrIban,
-           sanitize, buildPayload, round2, fmtAmountPay, fmtAmountLetter, fmtIban, fmtQrr,
-           fmtDate, addDays, addrDisplay, LANG };
+           sanitize, buildPayload, buildEpcPayload, epcAmount, epcNeedsBic, cleanBic, bicValid, inSepa,
+           CURRENCIES, curInfo, curDec, qrCurrency, roundTo, round2,
+           fmtAmountPay, fmtAmountLetter, fmtIban, fmtQrr, fmtDate, addDays, addrDisplay, LANG };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = Billy;
 /*LOGIC-END*/
@@ -480,11 +562,25 @@ const B = Billy;
 qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
 
 const PROFILE_FIELDS = ['sName','sArtist','sStreet','sNo','sZip','sCity','sCountry','sPhone','sMail',
-  'sForm','sIban','sUid','sVatRate','sPriceMode','cWindow','rDueDays','rCurrency','rLang','rClosing'];
+  'sForm','sIban','sBic','sBank','sUid','sVatRate','sPriceMode','cWindow','rDueDays','rCurrency','rLang',
+  'rIntl','rClosing'];
 const INVOICE_FIELDS = ['cName','cAttn','cStreet','cNo','cZip','cCity','cCountry',
   'rNo','rDate','rServiceFrom','rServiceTo','rTimeFrom','rTimeTo',
-  'rDueDays','rCurrency','rLang','rMessage','rClosing'];
+  'rDueDays','rCurrency','rIbanCur','rLang','rMessage','rClosing'];
 const LS = { profile:'billy_profile', invoices:'billy_invoices', seq:'billy_seq' };
+
+/* Eigenes Konto je Fremdwährung (z. B. EUR-Konto): wird pro Währung im Profil gemerkt.
+   ibanCurFor = Währung, zu der der aktuelle Inhalt des Feldes «rIbanCur» gehört. */
+let ibanByCur = {};
+let ibanCurFor = null;
+function syncIbanCur(){
+  const cur = $('rCurrency').value, el = $('rIbanCur');
+  if (cur !== ibanCurFor){ el.value = ibanByCur[cur] || ''; ibanCurFor = cur; }
+  else if (cur !== 'CHF'){
+    const v = el.value.trim();
+    if (v) ibanByCur[cur] = v; else delete ibanByCur[cur];
+  }
+}
 
 function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 function load(key, fallback){
@@ -517,6 +613,13 @@ function buildCountries(){
     $('countryList').innerHTML = [...prio, ...rest]
       .map(c => `<option value="${esc(CODE2NAME[c])}">`).join('');
   }catch(e){ /* Fallback: 2-Buchstaben-Codes funktionieren weiterhin */ }
+}
+/* ---------- Währungen ---------- */
+function buildCurrencies(){
+  const opt = c => `<option value="${c.code}">${c.code} (${esc(c.name)})</option>`;
+  $('rCurrency').innerHTML =
+    `<optgroup label="Mit QR-Zahlteil">${B.CURRENCIES.filter(c => c.qr).map(opt).join('')}</optgroup>` +
+    `<optgroup label="Ohne QR-Zahlteil (Bankverbindung)">${B.CURRENCIES.filter(c => !c.qr).map(opt).join('')}</optgroup>`;
 }
 const COUNTRY_ALIAS = { usa:'US', uk:'GB', grossbritannien:'GB', 'großbritannien':'GB',
   england:'GB', holland:'NL', 'vereinigte staaten von amerika':'US' };
@@ -581,6 +684,10 @@ function applyState(st, fields){
   }
   if (st.sVat !== undefined) $('sVat').checked = !!st.sVat;
   if (st.sVatNote !== undefined) $('sVatNote').checked = !!st.sVatNote;
+  if (!$('rCurrency').value) $('rCurrency').value = 'CHF';
+  if (st.ibanByCur && typeof st.ibanByCur === 'object') ibanByCur = {...st.ibanByCur};
+  /* Gespeicherte Rechnung bringt ihr Währungskonto mit, sonst aus dem Profil nachladen */
+  ibanCurFor = (fields.includes('rIbanCur') && st.rIbanCur !== undefined) ? $('rCurrency').value : null;
   if (st.items){
     $('items').innerHTML = '';
     st.items.forEach(addItemRow);
@@ -590,36 +697,79 @@ function applyState(st, fields){
 
 /* ---------- Berechnung ---------- */
 function computeTotals(st){
+  const dec = B.curDec(st.rCurrency);
+  const rnd = n => B.roundTo(n, dec);
   const rows = st.items
     .map(it => ({...it, qtyN: parseNum(it.qty), priceN: parseNum(it.price)}))
     .filter(it => it.desc.trim() || it.priceN)
-    .map(it => ({...it, total: B.round2(it.qtyN * it.priceN)}));
-  const sum = B.round2(rows.reduce((a,r) => a + r.total, 0));
+    .map(it => ({...it, total: rnd(it.qtyN * it.priceN)}));
+  const sum = rnd(rows.reduce((a,r) => a + r.total, 0));
   const rate = parseFloat(st.sVatRate);
   let net = sum, vat = 0, total = sum, mode = 'none';
   if (st.sVat){
     if (st.sPriceMode === 'gross'){
       mode = 'gross'; total = sum;
-      vat = B.round2(sum * rate / (100 + rate)); net = B.round2(sum - vat);
+      vat = rnd(sum * rate / (100 + rate)); net = rnd(sum - vat);
     } else {
       mode = 'net'; net = sum;
-      vat = B.round2(sum * rate / 100); total = B.round2(sum + vat);
+      vat = rnd(sum * rate / 100); total = rnd(sum + vat);
     }
   }
-  return { rows, sum, net, vat, total, rate, mode };
+  return { rows, sum, net, vat, total, rate, mode, dec };
+}
+
+/* ---------- Zahlungsweg ---------- */
+/* Welches Konto, ob QR-Zahlteil, ob Bankverbindung (IBAN/BIC) und ob EPC-QR auf die Rechnung kommen */
+function payContext(st){
+  const cur = st.rCurrency;
+  const qrCur = B.qrCurrency(cur);
+  const mainIban = B.cleanIban(st.sIban);
+  const ownIban = cur !== 'CHF' ? B.cleanIban(st.rIbanCur) : '';
+  const iban = ownIban || mainIban;
+  const cCC = countryCode(st.cCountry) || 'CH';
+  const abroad = cCC !== 'CH' && cCC !== 'LI';
+  const qrIban = B.isQrIban(iban);
+  /* Ohne QR-Zahlteil ist die Bankverbindung der einzige Zahlweg; bei Kunden im Ausland optional.
+     Eine QR-IBAN taugt nicht für Zahlungen aus dem Ausland, daher dort keine Bankverbindung. */
+  const bankOptional = qrCur && abroad;
+  const bank = !qrCur || (bankOptional && !!st.rIntl && !qrIban);
+  /* EPC-QR nur für EUR-Zahlungen aus dem SEPA-Raum */
+  const bic = B.cleanBic(st.sBic);
+  const epcWanted = bank && cur === 'EUR' && abroad && B.inSepa(cCC) && B.inSepa(iban.slice(0,2));
+  /* Für eine Schweizer IBAN (ausserhalb EWR) gehört die BIC zwingend in den EPC-QR */
+  const epcMissingBic = epcWanted && !bic && B.epcNeedsBic(iban);
+  const epc = epcWanted && !epcMissingBic;
+  return { cur, qrCur, mainIban, ownIban, iban, cCC, abroad, qrIban, bankOptional, bank, epc,
+           epcMissingBic, bic };
 }
 
 /* ---------- QR-SVG ---------- */
-function qrSvg(payload){
+function qrMatrix(payload, maxModules){
   const qr = qrcode(0, 'M');
   qr.addData(payload, 'Byte');
   qr.make();
   const n = qr.getModuleCount();
-  if (n > 117) return null; /* Spez.-Maximum Version 25 */
+  if (n > maxModules) return null;
   let d = '';
   for (let y = 0; y < n; y++)
     for (let x = 0; x < n; x++)
       if (qr.isDark(y, x)) d += `M${x} ${y}h1v1h-1z`;
+  return { n, d };
+}
+/* EPC-QR: höchstens Version 13 (69 Module), Ruhezone von 4 Modulen im SVG enthalten */
+function epcSvg(payload){
+  const m = qrMatrix(payload, 69);
+  if (!m) return null;
+  const { n, d } = m;
+  return `<svg viewBox="-4 -4 ${n + 8} ${n + 8}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
+    <rect x="-4" y="-4" width="${n + 8}" height="${n + 8}" fill="#fff"/>
+    <path d="${d}" fill="#000"/>
+  </svg>`;
+}
+function qrSvg(payload){
+  const m = qrMatrix(payload, 117); /* Spez.-Maximum Version 25 */
+  if (!m) return null;
+  const { n, d } = m;
   /* Schweizer Kreuz 7×7 mm zentriert (Proportionen 32er-Raster: Balken 6, Arme 20) */
   const s = n * 7 / 46, c = (n - s) / 2, u = s / 32;
   return `<svg viewBox="0 0 ${n} ${n}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">
@@ -632,11 +782,22 @@ function qrSvg(payload){
 }
 
 /* ---------- Validierung ---------- */
-function validate(st, totals){
+function validate(st, totals, pc){
   const errs = [];
-  const iban = B.cleanIban(st.sIban);
-  if (!iban) errs.push('IBAN des Absenders fehlt.');
-  else if (!B.qrAccountOk(iban)) errs.push('IBAN ist ungültig (es braucht eine gültige CH/LI-IBAN mit 21 Zeichen).');
+  const iban = pc.iban, cur = pc.cur;
+  if (pc.ownIban){
+    if (pc.qrCur ? !B.qrAccountOk(iban) : !B.ibanValid(iban))
+      errs.push(`IBAN des ${cur}-Kontos ist ungültig` +
+        (pc.qrCur ? ' (für den QR-Zahlteil braucht es eine gültige CH/LI-IBAN mit 21 Zeichen).' : '.'));
+  }
+  else if (!iban) errs.push('IBAN des Absenders fehlt.');
+  else if (pc.qrCur ? !B.qrAccountOk(iban) : !B.ibanValid(iban))
+    errs.push(pc.qrCur ? 'IBAN ist ungültig (es braucht eine gültige CH/LI-IBAN mit 21 Zeichen).' : 'IBAN ist ungültig.');
+  if (!pc.qrCur && pc.qrIban)
+    errs.push(`Eine QR-IBAN funktioniert nur mit QR-Zahlteil (CHF/EUR). Für ${cur} die normale IBAN des Kontos unter «Eigenes Konto für ${cur}» eintragen.`);
+  if (pc.bic && !B.bicValid(pc.bic)) errs.push('BIC/SWIFT ist ungültig (8 oder 11 Zeichen, z. B. POFICHBEXXX).');
+  else if (!pc.qrCur && !pc.bic)
+    errs.push(`Absender: BIC/SWIFT der Bank fehlt. Ohne QR-Zahlteil braucht es sie für Zahlungen in ${cur}.`);
   if (!st.sName.trim()) errs.push('Absender: Name fehlt.');
   if (!st.sZip.trim() || !st.sCity.trim()) errs.push('Absender: PLZ/Ort fehlen.');
   if (!countryCode(st.sCountry)) errs.push('Absender: Land nicht erkannt – deutschen Namen (z. B. «Schweiz») eingeben oder aus der Liste wählen.');
@@ -645,8 +806,8 @@ function validate(st, totals){
   if (!countryCode(st.cCountry)) errs.push('Kunde: Land nicht erkannt – deutschen Namen (z. B. «Schweiz») eingeben oder aus der Liste wählen.');
   if (!st.rNo.trim()) errs.push('Rechnungsnummer fehlt.');
   if (!(totals.total > 0)) errs.push('Betrag muss grösser als 0 sein (mindestens eine Position erfassen).');
-  if (totals.total > 999999999.99) errs.push('Betrag übersteigt das QR-Maximum von 999 999 999.99.');
-  if (B.qrAccountOk(iban) && B.isQrIban(iban) && !st.rNo.replace(/\D/g,''))
+  if (pc.qrCur && totals.total > 999999999.99) errs.push('Betrag übersteigt das QR-Maximum von 999 999 999.99.');
+  if (pc.qrCur && B.qrAccountOk(iban) && B.isQrIban(iban) && !st.rNo.replace(/\D/g,''))
     errs.push('QR-IBAN erkannt: Die Rechnungsnummer braucht mindestens eine Ziffer für die QR-Referenz.');
   if (st.rServiceFrom && st.rServiceTo && st.rServiceTo < st.rServiceFrom)
     errs.push('Leistungszeitraum: Das Enddatum liegt vor dem Startdatum.');
@@ -657,13 +818,16 @@ function validate(st, totals){
 
 /* ---------- Render ---------- */
 function render(){
+  syncIbanCur();
   const st = readState();
   const form = st.sForm || 'privat';
   const vatAllowed = form !== 'privat';
   const effVat = st.sVat && vatAllowed;
   const totals = computeTotals({...st, sVat: effVat});
-  const errs = validate(st, totals);
+  const pc = payContext(st);
+  const errs = validate(st, totals, pc);
   const lang = B.LANG[st.rLang] || B.LANG.de;
+  const cur = pc.cur, dec = totals.dec;
 
   /* Rechtsform-abhängige Formularteile */
   const show = (id,on) => { $(id).style.display = on ? '' : 'none'; };
@@ -684,18 +848,74 @@ function render(){
   show('uidHint', vatAllowed && !!uh.trim());
 
   /* IBAN-Hinweis */
-  const iban = B.cleanIban(st.sIban);
+  const mainIban = pc.mainIban;
   const ibanHint = $('ibanHint');
-  $('sIban').classList.toggle('bad', !!iban && !B.qrAccountOk(iban));
-  if (!iban){ ibanHint.textContent = ''; ibanHint.className = 'hintline'; }
-  else if (!B.qrAccountOk(iban)){ ibanHint.textContent = 'Ungültige IBAN.'; ibanHint.className = 'hintline'; }
-  else if (B.isQrIban(iban)){
+  $('sIban').classList.toggle('bad', !!mainIban && !B.qrAccountOk(mainIban));
+  if (!mainIban){ ibanHint.textContent = ''; ibanHint.className = 'hintline'; }
+  else if (!B.qrAccountOk(mainIban)){ ibanHint.textContent = 'Ungültige IBAN.'; ibanHint.className = 'hintline'; }
+  else if (B.isQrIban(mainIban)){
     ibanHint.textContent = 'QR-IBAN erkannt – QR-Referenz wird automatisch aus der Rechnungsnummer erzeugt.';
     ibanHint.className = 'hintline ok';
   } else {
     ibanHint.textContent = 'Normale IBAN – Zahlung ohne Referenz, Zuordnung über die Mitteilung.';
     ibanHint.className = 'hintline ok';
   }
+
+  /* BIC-Hinweis */
+  const bicBad = !!pc.bic && !B.bicValid(pc.bic);
+  let bh = '';
+  if (bicBad) bh = 'Ungültige BIC (8 oder 11 Zeichen).';
+  else if (pc.bic && B.ibanValid(pc.iban) && pc.bic.slice(4,6) !== pc.iban.slice(0,2))
+    bh = `Die BIC gehört zu einer Bank in ${pc.bic.slice(4,6)}, die IBAN zu ${pc.iban.slice(0,2)}. Bitte prüfen.`;
+  else if (!pc.bic && pc.bank)
+    bh = pc.epcMissingBic ? 'BIC ergänzen: Sie gehört in den EPC-QR, und Banken im Ausland brauchen sie für die Überweisung.'
+                          : 'BIC ergänzen: Banken im Ausland brauchen sie für die Überweisung.';
+  $('sBic').classList.toggle('bad', bicBad);
+  $('bicHint').textContent = bh;
+  show('bicHint', !!bh);
+
+  /* Währung: eigenes Konto, Bankverbindung, EPC-QR */
+  show('rowIbanCur', cur !== 'CHF');
+  $('lblIbanCur').textContent = `Eigenes Konto für ${cur} (IBAN, optional)`;
+  $('rIbanCur').placeholder = 'leer = IBAN aus dem Absender';
+  const ownBad = !!pc.ownIban && (pc.qrCur ? !B.qrAccountOk(pc.ownIban) : !B.ibanValid(pc.ownIban));
+  let oh = '';
+  if (cur !== 'CHF'){
+    if (!pc.ownIban) oh = `Leer lassen: Die Zahlung geht auf die IBAN im Absender. Ist das ein CHF-Konto, rechnet die Bank ${cur} in CHF um.`;
+    else if (ownBad) oh = pc.qrCur ? 'Ungültige IBAN (für den QR-Zahlteil braucht es eine CH/LI-IBAN).' : 'Ungültige IBAN.';
+    else oh = `Wird für ${cur} gemerkt und auf allen ${cur}-Rechnungen verwendet.`;
+  }
+  $('rIbanCur').classList.toggle('bad', ownBad);
+  $('ibanCurHint').textContent = oh;
+  $('ibanCurHint').className = 'hintline' + (pc.ownIban && !ownBad ? ' ok' : '');
+  show('ibanCurHint', !!oh);
+  const sepaEur = cur === 'EUR' && B.inSepa(pc.cCC);
+  show('rowIntl', pc.bankOptional);
+  $('lblIntl').textContent = sepaEur
+    ? 'Bankverbindung und EPC-QR (GiroCode) für Zahlungen aus dem Ausland drucken'
+    : 'Bankverbindung (IBAN, BIC) für Zahlungen aus dem Ausland drucken';
+  let ih = '';
+  if (!pc.qrCur)
+    ih = `Der Swiss QR Code erlaubt nur CHF und EUR. Für ${cur} steht statt dem Zahlteil die Bankverbindung (IBAN, BIC) auf der Rechnung.`;
+  else if (pc.bankOptional && st.rIntl && pc.qrIban)
+    ih = 'QR-IBAN: Zahlungen aus dem Ausland sind darauf nicht möglich, deshalb keine Bankverbindung. ' +
+      (cur !== 'CHF' ? `Für Kunden im Ausland die normale IBAN unter «Eigenes Konto für ${cur}» eintragen.`
+                     : 'Für Kunden im Ausland die normale IBAN des Kontos verwenden.');
+  else if (pc.epc)
+    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil stehen IBAN, BIC und ein EPC-QR (GiroCode) auf der Rechnung. Damit zahlt die Firma per SEPA-Überweisung in EUR.';
+  else if (pc.epcMissingBic)
+    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil steht die Bankverbindung auf der Rechnung. Der EPC-QR (GiroCode) erscheint, sobald die BIC im Absender eingetragen ist.';
+  else if (pc.bank)
+    ih = 'Kunde im Ausland: Zusätzlich zum QR-Zahlteil stehen IBAN und BIC auf der Rechnung, für eine Überweisung aus dem Ausland.' +
+      (cur === 'CHF' && B.inSepa(pc.cCC) ? ' Tipp: Kunden in der EU zahlen am einfachsten in EUR (SEPA-Überweisung mit EPC-QR).' : '');
+  /* SIX IG v2.4 (ab 14.11.2026): QR-IBAN mit QR-Referenz nur noch für CHF */
+  if (cur === 'EUR' && pc.qrIban && !(pc.bankOptional && st.rIntl))
+    ih = (ih ? ih + ' ' : '') + 'Hinweis: Ab 14.11.2026 (SIX v2.4) ist die QR-IBAN nur noch für CHF vorgesehen. Für EUR die normale IBAN unter «Eigenes Konto für EUR» eintragen.';
+  $('intlHint').textContent = ih;
+  show('intlHint', !!ih);
+  $('lblLang').textContent = pc.qrCur ? 'Sprache Zahlteil' : 'Sprache Bankverbindung';
+  $('lblMessage').textContent = pc.qrCur ? 'Zusätzliche Informationen (Zahlteil)' : 'Zahlungszweck (Bankverbindung)';
+  for (const el of document.querySelectorAll('.i-price')) el.placeholder = dec ? '0.' + '0'.repeat(dec) : '0';
 
   /* Fehlerliste */
   $('problemList').innerHTML = errs.map(e => `<li>${esc(e)}</li>`).join('');
@@ -739,19 +959,19 @@ function render(){
   $('vMeta').innerHTML = metaRows
     .map(([k,v]) => `<span class="k">${esc(k)}</span><span>${esc(v)}</span>`).join('');
 
+  const amt = n => B.fmtAmountLetter(n, dec);
   $('vItems').innerHTML = totals.rows.map(r => `<tr>
     <td>${esc(r.desc)}</td><td class="r">${esc(r.qty)}</td><td>${esc(r.unit)}</td>
-    <td class="r">${B.fmtAmountLetter(r.priceN)}</td><td class="r">${B.fmtAmountLetter(r.total)}</td></tr>`).join('');
+    <td class="r">${amt(r.priceN)}</td><td class="r">${amt(r.total)}</td></tr>`).join('');
 
-  const cur = st.rCurrency;
   let trows = '';
   if (totals.mode === 'net'){
-    trows += `<div class="trow sub"><span>Zwischensumme exkl. MWST</span><span>${cur} ${B.fmtAmountLetter(totals.net)}</span></div>`;
-    trows += `<div class="trow sub"><span>MWST ${totals.rate} %</span><span>${cur} ${B.fmtAmountLetter(totals.vat)}</span></div>`;
+    trows += `<div class="trow sub"><span>Zwischensumme exkl. MWST</span><span>${cur} ${amt(totals.net)}</span></div>`;
+    trows += `<div class="trow sub"><span>MWST ${totals.rate} %</span><span>${cur} ${amt(totals.vat)}</span></div>`;
   }
-  trows += `<div class="trow grand"><span>Gesamtbetrag</span><span>${cur} ${B.fmtAmountLetter(totals.total)}</span></div>`;
+  trows += `<div class="trow grand"><span>Gesamtbetrag</span><span>${cur} ${amt(totals.total)}</span></div>`;
   if (totals.mode === 'gross')
-    trows += `<div class="trow sub" style="font-size:8.5pt;color:#333"><span>davon MWST ${totals.rate} %</span><span>${cur} ${B.fmtAmountLetter(totals.vat)}</span></div>`;
+    trows += `<div class="trow sub" style="font-size:8.5pt;color:#333"><span>davon MWST ${totals.rate} %</span><span>${cur} ${amt(totals.vat)}</span></div>`;
   $('vTotals').innerHTML = trows;
   $('vVatNote').textContent = (!effVat && st.sVatNote)
     ? 'Ohne MWST – nicht im Register der mehrwertsteuerpflichtigen Personen eingetragen.' : '';
@@ -760,12 +980,48 @@ function render(){
     ? `Zahlbar innert ${st.rDueDays} Tagen bis ${B.fmtDate(dueIso)}.` : '';
   $('vClosing').textContent = st.rClosing;
 
-  /* --- Zahlteil --- */
+  const defaultMessage = `Rechnung ${st.rNo} vom ${B.fmtDate(st.rDate)}`;
+  const message = st.rMessage.trim() || defaultMessage;
+  $('rMessage').placeholder = defaultMessage;
+
+  /* --- Bankverbindung (Fremdwährung oder Kunde im Ausland) --- */
+  if (pc.bank){
+    let land = sCC;
+    try{ land = new Intl.DisplayNames([st.rLang || 'de'], {type:'region'}).of(sCC) || sCC; }catch(e){}
+    const holder = [st.sName, [st.sStreet, st.sNo].filter(Boolean).join(' '),
+      [st.sZip, st.sCity].filter(Boolean).join(' '), land].map(s => s.trim()).filter(Boolean).join(', ');
+    const bankName = st.sBank.trim();
+    /* IBAN und BIC auf einer Zeile, damit der Block neben dem Zahlteil Platz hat */
+    const rows = [[lang.holder, esc(holder)],
+      ['IBAN', esc(B.fmtIban(pc.iban)) +
+        (pc.bic ? `<span class="bk-sep"></span><span class="k">${esc(lang.bic)}</span>&nbsp; ${esc(pc.bic)}` : '')]];
+    if (bankName) rows.push([lang.bankName, esc(bankName)]);
+    rows.push([lang.purpose, esc(B.sanitize(message).slice(0,140))]);
+    let qr = '', cap = '';
+    if (pc.epc){
+      cap = `<div class="bk-cap">${esc(lang.epc)}</div>`;
+      if (!errs.length){
+        const epcPayload = B.buildEpcPayload({ bic:pc.bic, name:st.sName, iban:pc.iban, amount:totals.total, text:message });
+        const svg = epcSvg(epcPayload);
+        qr = `<div class="bk-qr" id="vEpc" data-payload="${esc(epcPayload)}">${svg || '<div class="placeholder">Zu lang</div>'}</div>`;
+      } else {
+        qr = '<div class="bk-qr"><div class="placeholder">EPC-QR folgt, sobald alles vollständig ist.</div></div>';
+      }
+    }
+    $('vBank').innerHTML = `<div class="bk-text"><div class="bk-title">${esc(lang.bank)}</div><div class="bk-grid">` +
+      rows.map(([k,v]) => `<span class="k">${esc(k)}</span><span>${v}</span>`).join('') +
+      `</div>${cap}</div>${qr}`;
+  } else {
+    $('vBank').innerHTML = '';
+  }
+
+  /* --- Zahlteil (nur CHF/EUR) --- */
+  $('sheet').classList.toggle('noqr', !pc.qrCur);
+  const iban = pc.iban;
   const creditor = { name:st.sName, street:st.sStreet, houseNo:st.sNo, zip:st.sZip, city:st.sCity, country:sCC };
   const debtor   = { name:st.cName, street:st.cStreet, houseNo:st.cNo, zip:st.cZip, city:st.cCity, country:cCC };
   const useQrr = B.qrAccountOk(iban) && B.isQrIban(iban);
   const reference = useQrr ? B.makeQrrRef(st.rNo) : '';
-  const message = st.rMessage.trim() || `Rechnung ${st.rNo} vom ${B.fmtDate(st.rDate)}`;
 
   $('qTitleR').textContent = lang.rec;
   $('qTitleP').textContent = lang.pay;
@@ -786,7 +1042,7 @@ function render(){
   $('qAmountR').innerHTML = amtHtml;
   $('qAmountP').innerHTML = amtHtml;
 
-  if (!errs.length){
+  if (!errs.length && pc.qrCur){
     const payload = B.buildPayload({
       iban, creditor, debtor,
       amount: totals.total, currency: cur,
@@ -797,14 +1053,16 @@ function render(){
     $('qCode').innerHTML = svg || '<div class="placeholder">Inhalt zu lang für den QR-Code – Mitteilung kürzen.</div>';
     $('qCode').dataset.payload = payload;
   } else {
-    $('qCode').innerHTML = '<div class="placeholder">QR-Code erscheint, sobald alle Pflichtangaben vollständig sind.</div>';
+    $('qCode').innerHTML = pc.qrCur
+      ? '<div class="placeholder">QR-Code erscheint, sobald alle Pflichtangaben vollständig sind.</div>' : '';
     delete $('qCode').dataset.payload;
   }
 
   /* Passt alles auf eine Seite? */
   const body = document.querySelector('.lbody');
   if (body.scrollHeight > body.clientHeight + 2 && !errs.length){
-    $('problemList').innerHTML = '<li>Inhalt passt nicht auf eine A4-Seite – Positionen oder Texte kürzen.</li>';
+    $('problemList').innerHTML = '<li>Inhalt passt nicht auf eine A4-Seite – Positionen oder Texte kürzen' +
+      (pc.bankOptional && pc.bank ? ' oder die Bankverbindung für das Ausland weglassen' : '') + '.</li>';
     $('problems').classList.add('show');
     $('btnPrint').disabled = true;
   }
@@ -814,7 +1072,7 @@ function render(){
 
 /* ---------- Persistenz ---------- */
 function saveProfile(st){
-  const p = { sVat: st.sVat, sVatNote: st.sVatNote };
+  const p = { sVat: st.sVat, sVatNote: st.sVatNote, ibanByCur };
   for (const id of PROFILE_FIELDS) p[id] = st[id];
   store(LS.profile, p);
 }
@@ -829,7 +1087,7 @@ function refreshSavedList(){
       const row = document.createElement('div');
       row.className = 'savedRow';
       row.innerHTML = `<span class="load" title="Laden"><b>${esc(inv.no)}</b> · ${esc(inv.customer)}</span>
-        <span class="amt">${esc(inv.currency)} ${B.fmtAmountLetter(inv.total)}</span>
+        <span class="amt">${esc(inv.currency)} ${B.fmtAmountLetter(Number(inv.total) || 0, B.curDec(inv.currency))}</span>
         <button class="mini" title="Löschen">&#10005;</button>`;
       row.querySelector('.load').addEventListener('click', () => {
         applyState(inv.data, [...PROFILE_FIELDS, ...INVOICE_FIELDS]);
@@ -848,7 +1106,7 @@ function refreshSavedList(){
 }
 function saveInvoice(){
   const st = readState();
-  const totals = computeTotals(st);
+  const totals = computeTotals({...st, sVat: st.sVat && st.sForm !== 'privat'});
   const invoices = load(LS.invoices, []).filter(x => x.no !== st.rNo);
   invoices.push({ no: st.rNo, date: st.rDate, customer: st.cName,
                   currency: st.rCurrency, total: totals.total, data: st });
@@ -918,6 +1176,7 @@ function init(){
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol))
     navigator.serviceWorker.register('./sw.js').catch(() => {});
   buildCountries();
+  buildCurrencies();
   applyState(load(LS.profile, {}), PROFILE_FIELDS);
   $('rNo').value = nextInvoiceNo();
   $('rDate').value = new Date().toISOString().slice(0,10);
@@ -926,11 +1185,12 @@ function init(){
 
   document.body.addEventListener('input', render);
   document.body.addEventListener('change', render);
-  $('sIban').addEventListener('blur', () => {
-    const v = B.cleanIban($('sIban').value);
-    if (v) $('sIban').value = B.fmtIban(v);
+  for (const id of ['sIban','rIbanCur']) $(id).addEventListener('blur', () => {
+    const v = B.cleanIban($(id).value);
+    if (v) $(id).value = B.fmtIban(v);
     render();
   });
+  $('sBic').addEventListener('blur', () => { $('sBic').value = B.cleanBic($('sBic').value); render(); });
   $('btnAddItem').addEventListener('click', () => { addItemRow(); render(); });
   $('btnNew').addEventListener('click', newInvoice);
   $('btnSave').addEventListener('click', () => { saveInvoice(); });
