@@ -263,7 +263,7 @@ input.bad{border-color:var(--red);background:#fff6f6}
   <details class="card" open>
     <summary>Kunde / Rechnungsempfänger</summary>
     <div class="cardbody">
-      <label class="f wide"><b>Name / Firma *</b><input type="text" id="cName" maxlength="70" list="customerList"></label>
+      <label class="f wide"><b>Name / Firma *</b><input type="text" id="cName" maxlength="70" list="customerList" autocorrect="off" spellcheck="false"></label>
       <datalist id="customerList"></datalist>
       <label class="f wide"><b>Zu Händen (optional)</b><input type="text" id="cAttn" maxlength="70" placeholder="z. Hd. Frau Muster"></label>
       <label class="f"><b>Strasse</b><input type="text" id="cStreet" maxlength="70"></label>
@@ -605,6 +605,11 @@ function rememberCurAccount(){
   curAccounts[cur] = { iban, bic: $('rBicCur').value.trim() };
 }
 
+/* Heutiges Datum nach Ortszeit (toISOString wäre UTC und nach Mitternacht noch «gestern») */
+function todayIso(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
 function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ return false; } }
 function load(key, fallback){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -1146,7 +1151,7 @@ function refreshSavedList(){
         <span class="amt">${esc(inv.currency)} ${B.fmtAmountLetter(Number(inv.total) || 0, B.curDec(inv.currency))}</span>
         <button class="mini" title="Löschen">&#10005;</button>`;
       row.querySelector('.load').addEventListener('click', () => {
-        applyState(inv.data, [...PROFILE_FIELDS, ...INVOICE_FIELDS]);
+        applyWithSenderCheck(inv.data, `Rechnung ${inv.no}`, 'den Rest der Rechnung übernehmen.');
         render();
       });
       row.querySelector('button').addEventListener('click', () => {
@@ -1165,21 +1170,49 @@ function refreshCustomers(){
     .map(n => (n || '').trim()).filter(Boolean))];
   $('customerList').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
 }
-/* Bekannten Kunden übernehmen: Adresse aus der letzten Rechnung (sonst Vorlage) an diesen Kunden,
-   aber nur, solange die Adressfelder noch leer sind, damit nichts überschrieben wird */
+/* Bekannten Kunden übernehmen: Adresse samt Land aus der neusten Rechnung oder Vorlage an diesen
+   Kunden, aber nur, solange die Adressfelder noch leer sind, damit nichts überschrieben wird */
 const CUST_ADDR = ['cAttn','cStreet','cNo','cZip','cCity'];
 function fillKnownCustomer(){
   const name = $('cName').value.trim();
   if (!name || CUST_ADDR.some(id => $(id).value.trim())) return;
   const same = d => d && (d.cName || '').trim() === name;
-  const invs = load(LS.invoices, []).filter(i => same(i.data))
-    .sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')));
-  const tpl = load(LS.templates, []).find(t => same(t.data));
-  const src = invs.length ? invs[invs.length - 1].data : tpl && tpl.data;
-  if (!src) return;
-  for (const id of CUST_ADDR) if (typeof src[id] === 'string') $(id).value = src[id];
-  const land = $('cCountry').value.trim();
-  if (typeof src.cCountry === 'string' && (!land || land === 'Schweiz')) $('cCountry').value = src.cCountry;
+  const srcs = [...load(LS.invoices, []).filter(i => same(i.data)).map(i => ({ when: String(i.date || ''), data: i.data })),
+                ...load(LS.templates, []).filter(t => same(t.data)).map(t => ({ when: String(t.saved || '').slice(0,10), data: t.data }))]
+    .sort((a,b) => a.when.localeCompare(b.when));
+  if (!srcs.length) return;
+  const src = srcs[srcs.length - 1].data;
+  for (const id of [...CUST_ADDR, 'cCountry']) if (typeof src[id] === 'string') $(id).value = src[id];
+}
+
+/* Absenderangaben einer Vorlage/Rechnung mit dem aktuellen Absender vergleichen.
+   Liefert die Bezeichnungen der abweichenden Angaben (leer = gleich). */
+const SENDER_LABELS = { sName:'Name', sArtist:'Künstlername', sStreet:'Adresse', sNo:'Adresse', sZip:'Adresse',
+  sCity:'Adresse', sCountry:'Adresse', sPhone:'Telefon', sMail:'E-Mail', sForm:'Rechtsform', sIban:'IBAN',
+  sBic:'BIC', sBank:'Bank', sUid:'UID', sVat:'MWST', sVatRate:'MWST', sPriceMode:'MWST', sVatNote:'MWST-Hinweis' };
+function senderDiff(data){
+  const cur = readState(), norm = (id, v) => {
+    if (typeof v === 'boolean') return v;
+    v = String(v ?? '').trim();
+    return id === 'sIban' || id === 'sBic' ? v.replace(/\s+/g,'').toUpperCase() : v;
+  };
+  const out = [];
+  for (const id of Object.keys(SENDER_LABELS))
+    if (data[id] !== undefined && norm(id, data[id]) !== norm(id, cur[id]) && !out.includes(SENDER_LABELS[id]))
+      out.push(SENDER_LABELS[id]);
+  return out;
+}
+/* Daten übernehmen; weicht der Absender ab, fragen, ob er übernommen (und gespeichert) werden soll */
+function applyWithSenderCheck(data, intro, keepLabel){
+  const diff = senderDiff(data);
+  let d = data;
+  if (diff.length && !confirm(`${intro} hat einen anderen Absender als jetzt eingetragen (${diff.join(', ')}).\n\n` +
+      `OK: Absender daraus übernehmen. Er ersetzt den gespeicherten Absender.\n` +
+      `Abbrechen: aktuellen Absender behalten, ${keepLabel}`)){
+    d = {...data};
+    for (const id of Object.keys(SENDER_LABELS)) delete d[id];
+  }
+  applyState(d, [...PROFILE_FIELDS, ...INVOICE_FIELDS]);
 }
 
 /* ---------- Vorlagen ---------- */
@@ -1219,9 +1252,9 @@ function refreshTemplates(){
   refreshCustomers();
 }
 function applyTemplate(t){
-  applyState(t.data, [...PROFILE_FIELDS, ...INVOICE_FIELDS]);
+  applyWithSenderCheck(t.data, `Die Vorlage «${t.name}»`, 'den Rest der Vorlage übernehmen.');
   $('rNo').value = nextInvoiceNo();
-  $('rDate').value = new Date().toISOString().slice(0,10);
+  $('rDate').value = todayIso();
   render();
 }
 function saveTemplate(){
@@ -1242,6 +1275,11 @@ function saveTemplate(){
 function saveInvoice(){
   const st = readState();
   const totals = computeTotals({...st, sVat: st.sVat && st.sForm !== 'privat'});
+  /* Gleiche Nummer, anderer Kunde: nicht still überschreiben */
+  const old = load(LS.invoices, []).find(x => x.no === st.rNo);
+  if (old && (old.customer || '').trim() !== st.cName.trim() &&
+      !confirm(`Unter der Nummer ${st.rNo} ist schon eine Rechnung an «${old.customer || 'unbekannt'}» gespeichert. Ersetzen?`))
+    return false;
   const invoices = load(LS.invoices, []).filter(x => x.no !== st.rNo);
   invoices.push({ no: st.rNo, date: st.rDate, customer: st.cName,
                   currency: st.rCurrency, total: totals.total, data: st });
@@ -1250,6 +1288,7 @@ function saveInvoice(){
   const m = st.rNo.match(/(\d+)\s*$/);
   if (m) store(LS.seq, Math.max(load(LS.seq, 0), parseInt(m[1],10)));
   refreshSavedList();
+  return true;
 }
 function nextInvoiceNo(){
   const seq = load(LS.seq, 0) + 1;
@@ -1260,7 +1299,7 @@ function newInvoice(){
     'rServiceFrom','rServiceTo','rTimeFrom','rTimeTo','rMessage']) $(id).value = '';
   $('cCountry').value = 'Schweiz';
   $('rNo').value = nextInvoiceNo();
-  $('rDate').value = new Date().toISOString().slice(0,10);
+  $('rDate').value = todayIso();
   $('items').innerHTML = '';
   addItemRow();
   curAccFor = null;
@@ -1274,7 +1313,7 @@ function exportBackup(){
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'billy-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.download = 'billy-backup-' + todayIso() + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -1289,6 +1328,7 @@ function importBackup(file){
       if (data.seq) store(LS.seq, data.seq);
       if (Array.isArray(data.templates)) store(LS.templates, data.templates);
       applyState(load(LS.profile, {}), PROFILE_FIELDS);
+      if (load(LS.invoices, []).some(x => x.no === $('rNo').value.trim())) $('rNo').value = nextInvoiceNo();
       refreshSavedList();
       refreshTemplates();
       render();
@@ -1317,7 +1357,7 @@ function init(){
   buildCurrencies();
   applyState(load(LS.profile, {}), PROFILE_FIELDS);
   $('rNo').value = nextInvoiceNo();
-  $('rDate').value = new Date().toISOString().slice(0,10);
+  $('rDate').value = todayIso();
   addItemRow();
   refreshSavedList();
   refreshTemplates();
@@ -1340,13 +1380,13 @@ function init(){
     $(id).addEventListener('input', () => { curAccDirty = true; rememberCurAccount(); });
   $('btnAddItem').addEventListener('click', () => { addItemRow(); render(); });
   $('btnSaveTpl').addEventListener('click', saveTemplate);
-  /* Kunde aus der Vorschlagsliste gewählt (oder Feld verlassen): Adresse übernehmen; läuft vor render() */
+  /* Kunde aus der Vorschlagsliste gewählt und Feld verlassen: Adresse übernehmen; läuft vor render().
+     Bewusst nur bei «change», damit Autokorrektur beim Tippen keine fremde Adresse einsetzt. */
   $('cName').addEventListener('change', fillKnownCustomer);
-  $('cName').addEventListener('input', e => { if (e.inputType === 'insertReplacementText' || !e.inputType) fillKnownCustomer(); });
   $('btnNew').addEventListener('click', newInvoice);
   $('btnSave').addEventListener('click', () => { saveInvoice(); });
   $('btnPrint').addEventListener('click', () => {
-    saveInvoice();
+    if (!saveInvoice()) return;
     const old = document.title;
     document.title = 'Rechnung_' + $('rNo').value.replace(/[^\w.-]+/g,'_');
     window.print();
