@@ -85,7 +85,7 @@ input.bad{border-color:var(--red);background:#fff6f6}
 #problems ul{margin:4px 0 0;padding-left:18px}
 #problems.show{display:block}
 /* Archiv */
-#savedList{display:flex;flex-direction:column;gap:4px;grid-column:1/-1}
+#savedList,#tplList{display:flex;flex-direction:column;gap:4px;grid-column:1/-1}
 .savedRow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);
   border-radius:7px;font-size:12.5px;background:#fafaf8}
 .savedRow .load{cursor:pointer;flex:1}
@@ -208,6 +208,14 @@ input.bad{border-color:var(--red);background:#fff6f6}
 <aside id="form">
 
   <div id="problems"><b>Bitte prüfen:</b><ul id="problemList"></ul></div>
+
+  <details class="card" id="cardTemplates">
+    <summary id="tplSummary">Vorlagen</summary>
+    <div class="cardbody">
+      <div id="tplList"></div>
+      <button class="field wide" id="btnSaveTpl" title="Alles speichern: Absender, Kunde, Details, Positionen und Texte">Aktuelle Rechnung als Vorlage speichern</button>
+    </div>
+  </details>
 
   <details class="card" open id="cardSender">
     <summary>Absender (wird gespeichert)</summary>
@@ -570,7 +578,7 @@ const PROFILE_FIELDS = ['sName','sArtist','sStreet','sNo','sZip','sCity','sCount
 const INVOICE_FIELDS = ['cName','cAttn','cStreet','cNo','cZip','cCity','cCountry',
   'rNo','rDate','rServiceFrom','rServiceTo','rTimeFrom','rTimeTo',
   'rDueDays','rCurrency','rIbanCur','rBicCur','rLang','rMessage','rClosing'];
-const LS = { profile:'billy_profile', invoices:'billy_invoices', seq:'billy_seq' };
+const LS = { profile:'billy_profile', invoices:'billy_invoices', seq:'billy_seq', templates:'billy_templates' };
 
 /* Eigenes Konto je Fremdwährung (z. B. EUR-Konto, IBAN und BIC): wird pro Währung im Profil gemerkt.
    curAccFor = Währung, zu der der aktuelle Inhalt der Felder «rIbanCur»/«rBicCur» gehört. */
@@ -597,7 +605,7 @@ function rememberCurAccount(){
   curAccounts[cur] = { iban, bic: $('rBicCur').value.trim() };
 }
 
-function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+function store(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); return true; }catch(e){ return false; } }
 function load(key, fallback){
   try{ const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
   catch(e){ return fallback; }
@@ -1149,8 +1157,87 @@ function refreshSavedList(){
       list.appendChild(row);
     }
   }
-  const names = [...new Set(load(LS.invoices, []).map(i => i.customer).filter(Boolean))];
+  refreshCustomers();
+}
+function refreshCustomers(){
+  const names = [...new Set([...load(LS.invoices, []).map(i => i.customer),
+                             ...load(LS.templates, []).map(t => t.data && t.data.cName)]
+    .map(n => (n || '').trim()).filter(Boolean))];
   $('customerList').innerHTML = names.map(n => `<option value="${esc(n)}">`).join('');
+}
+/* Bekannten Kunden übernehmen: Adresse aus der letzten Rechnung (sonst Vorlage) an diesen Kunden,
+   aber nur, solange die Adressfelder noch leer sind, damit nichts überschrieben wird */
+const CUST_ADDR = ['cAttn','cStreet','cNo','cZip','cCity'];
+function fillKnownCustomer(){
+  const name = $('cName').value.trim();
+  if (!name || CUST_ADDR.some(id => $(id).value.trim())) return;
+  const same = d => d && (d.cName || '').trim() === name;
+  const invs = load(LS.invoices, []).filter(i => same(i.data))
+    .sort((a,b) => String(a.date || '').localeCompare(String(b.date || '')));
+  const tpl = load(LS.templates, []).find(t => same(t.data));
+  const src = invs.length ? invs[invs.length - 1].data : tpl && tpl.data;
+  if (!src) return;
+  for (const id of CUST_ADDR) if (typeof src[id] === 'string') $(id).value = src[id];
+  const land = $('cCountry').value.trim();
+  if (typeof src.cCountry === 'string' && (!land || land === 'Schweiz')) $('cCountry').value = src.cCountry;
+}
+
+/* ---------- Vorlagen ---------- */
+/* Eine Vorlage hält den kompletten Zustand: Absender, Kunde, Details, Positionen, Texte und Optionen.
+   Übernehmen stellt alles 1:1 wieder her; nur Rechnungsnummer und -datum sind neu, damit keine
+   gespeicherte Rechnung überschrieben wird. */
+function refreshTemplates(){
+  const tpls = load(LS.templates, []);
+  $('tplSummary').textContent = tpls.length ? `Vorlagen (${tpls.length})` : 'Vorlagen';
+  const list = $('tplList');
+  if (!tpls.length){
+    list.innerHTML = '<span style="color:var(--mut);font-size:12.5px">Noch keine Vorlagen.</span>';
+  } else {
+    list.innerHTML = '';
+    for (const t of tpls){
+      const d = t.data || {};
+      let amt = '';
+      try{
+        const tot = computeTotals({...d, items: d.items || [], sVat: d.sVat && d.sForm !== 'privat'});
+        amt = `${esc(d.rCurrency || 'CHF')} ${B.fmtAmountLetter(tot.total, tot.dec)}`;
+      }catch(e){}
+      const row = document.createElement('div');
+      row.className = 'savedRow';
+      row.innerHTML = `<span class="load" title="Als neue Rechnung übernehmen"><b>${esc(t.name)}</b>` +
+        `${d.cName && d.cName.trim() !== t.name ? ' · ' + esc(d.cName) : ''}</span>
+        <span class="amt">${amt}</span>
+        <button class="mini" title="Vorlage löschen">&#10005;</button>`;
+      row.querySelector('.load').addEventListener('click', () => applyTemplate(t));
+      row.querySelector('button').addEventListener('click', () => {
+        if (!confirm(`Vorlage «${t.name}» löschen?`)) return;
+        store(LS.templates, load(LS.templates, []).filter(x => x.name !== t.name));
+        refreshTemplates();
+      });
+      list.appendChild(row);
+    }
+  }
+  refreshCustomers();
+}
+function applyTemplate(t){
+  applyState(t.data, [...PROFILE_FIELDS, ...INVOICE_FIELDS]);
+  $('rNo').value = nextInvoiceNo();
+  $('rDate').value = new Date().toISOString().slice(0,10);
+  render();
+}
+function saveTemplate(){
+  const st = readState();
+  const first = ((st.items.find(i => i.desc.trim()) || {}).desc || '').trim();
+  const suggestion = [st.cName.trim(), first].filter(Boolean).join(' · ') || 'Vorlage';
+  const name = (prompt('Name der Vorlage:', suggestion) || '').trim();
+  if (!name) return;
+  const tpls = load(LS.templates, []);
+  if (tpls.some(t => t.name === name) && !confirm(`Vorlage «${name}» ersetzen?`)) return;
+  const next = tpls.filter(t => t.name !== name);
+  next.push({ name, saved: new Date().toISOString(), data: st });
+  next.sort((a,b) => a.name.localeCompare(b.name, 'de', {numeric:true}));
+  if (!store(LS.templates, next)){ alert('Vorlage konnte nicht gespeichert werden (Browser-Speicher voll oder gesperrt).'); return; }
+  refreshTemplates();
+  $('cardTemplates').open = true;
 }
 function saveInvoice(){
   const st = readState();
@@ -1183,7 +1270,7 @@ function newInvoice(){
 /* ---------- Backup ---------- */
 function exportBackup(){
   const data = { profile: load(LS.profile, {}), invoices: load(LS.invoices, []), seq: load(LS.seq, 0),
-                 exported: new Date().toISOString(), app: 'billy' };
+                 templates: load(LS.templates, []), exported: new Date().toISOString(), app: 'billy' };
   const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1200,8 +1287,10 @@ function importBackup(file){
       if (data.profile) store(LS.profile, data.profile);
       if (data.invoices) store(LS.invoices, data.invoices);
       if (data.seq) store(LS.seq, data.seq);
+      if (Array.isArray(data.templates)) store(LS.templates, data.templates);
       applyState(load(LS.profile, {}), PROFILE_FIELDS);
       refreshSavedList();
+      refreshTemplates();
       render();
       alert('Backup importiert.');
     }catch(e){ alert('Import fehlgeschlagen: ' + e.message); }
@@ -1231,6 +1320,7 @@ function init(){
   $('rDate').value = new Date().toISOString().slice(0,10);
   addItemRow();
   refreshSavedList();
+  refreshTemplates();
 
   document.body.addEventListener('input', render);
   document.body.addEventListener('change', render);
@@ -1249,6 +1339,10 @@ function init(){
   for (const id of ['rIbanCur','rBicCur'])
     $(id).addEventListener('input', () => { curAccDirty = true; rememberCurAccount(); });
   $('btnAddItem').addEventListener('click', () => { addItemRow(); render(); });
+  $('btnSaveTpl').addEventListener('click', saveTemplate);
+  /* Kunde aus der Vorschlagsliste gewählt (oder Feld verlassen): Adresse übernehmen; läuft vor render() */
+  $('cName').addEventListener('change', fillKnownCustomer);
+  $('cName').addEventListener('input', e => { if (e.inputType === 'insertReplacementText' || !e.inputType) fillKnownCustomer(); });
   $('btnNew').addEventListener('click', newInvoice);
   $('btnSave').addEventListener('click', () => { saveInvoice(); });
   $('btnPrint').addEventListener('click', () => {

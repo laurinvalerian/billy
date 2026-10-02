@@ -86,9 +86,23 @@ Im Absender lässt sich die Rechtsform wählen – die Rechnung passt sich autom
   Fremdwährungen die normale IBAN des Kontos verwenden. Ab 14.11.2026 (SIX v2.4) ist die QR-IBAN
   zudem nur noch für CHF vorgesehen; für EUR die normale IBAN unter «Eigenes Konto für EUR» eintragen.
 
+## Vorlagen und gespeicherte Rechnungen
+
+- **Vorlagen** (Karte ganz oben): «Aktuelle Rechnung als Vorlage speichern» sichert wirklich alles,
+  also Absender, Kunde, Rechnungsdetails, Positionen, Texte, Währung, Konto und alle Häkchen.
+  Ein Tipp auf die Vorlage übernimmt alles 1:1 als neue Rechnung; nur Rechnungsnummer und
+  Rechnungsdatum werden neu gesetzt, damit keine gespeicherte Rechnung überschrieben wird.
+  Gleicher Name ersetzt die Vorlage. Da auch der Absender drin ist: Nach einer Änderung im
+  Absender (z. B. neue IBAN) die Vorlage neu speichern.
+- **Gespeicherte Rechnungen** («Speichern» bzw. automatisch beim Drucken) lassen sich ebenfalls
+  vollständig wieder laden, mit ihrer ursprünglichen Nummer und ihrem Datum.
+- **Bekannte Kunden:** Wird ein Kunde aus der Vorschlagsliste gewählt, übernimmt Billy dessen
+  Adresse aus der letzten Rechnung (oder Vorlage), solange die Adressfelder noch leer sind.
+- Vorlagen sind im Backup enthalten.
+
 ## Daten & Backup
 
-- Absenderprofil und gespeicherte Rechnungen liegen im Browser-Speicher (localStorage) –
+- Absenderprofil, Vorlagen und gespeicherte Rechnungen liegen im Browser-Speicher (localStorage) –
   nur lokal, nichts verlässt das Gerät.
 - Unter «Gespeicherte Rechnungen & Backup» regelmässig **Backup exportieren** (JSON-Datei);
   damit lassen sich die Daten auf einem anderen Gerät oder nach einem Browser-Reset wiederherstellen.
